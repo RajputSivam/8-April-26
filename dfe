@@ -1,1 +1,276 @@
+576. Out of Boundary Paths
 
+Problem Understanding
+Given:
+
+An m x n grid with a ball
+Ball starts at position [startRow, startColumn]
+You can move the ball in 4 directions (left, right, up, down)
+At most maxMove moves allowed
+Ball can go outside the grid boundary
+
+Find:
+
+Count of all paths that move the ball out of the grid boundary
+Return answer modulo 10⁹ + 7
+
+Example:
+m=2, n=2, maxMove=2, start=[0,0]
+
+Grid:
+[S][ ]
+[ ][ ]
+
+Paths out in ≤2 moves:
+Move 1: go left  → OUT ✓
+Move 1: go up    → OUT ✓
+Move 2: go right → go up    → OUT ✓
+Move 2: go down  → go left  → OUT ✓
+... and more
+Answer = 6
+
+Approach — Memoized Recursion (Top-Down DP)
+Core Idea
+At each cell, try all 4 directions recursively. Count how many paths eventually cross the boundary within maxMove moves.
+The Recursion Logic
+solve(row, col, currMove)
+     │
+     ├── BASE CASE 1: Out of boundary?
+     │        → return 1  (found a valid path!)
+     │
+     ├── BASE CASE 2: currMove >= maxMove?
+     │        → return 0  (used all moves, still inside = fail)
+     │
+     └── RECURSIVE: Try all 4 directions
+              ans = left + right + up + down
+Why Memoization?
+Same (row, col, currMove) state can be reached via different paths — cache it to avoid recomputation.
+State Definition
+dp[row][col][currMove] = number of ways to go OUT
+                         starting from (row,col)
+                         with currMove moves already used
+
+Visual Flow
+solve(0, 0, 0)
+├── LEFT  → solve(0, -1, 1) → OUT OF BOUND → return 1 ✓
+├── UP    → solve(-1, 0, 1) → OUT OF BOUND → return 1 ✓
+├── RIGHT → solve(0, 1, 1)
+│           ├── LEFT  → solve(0,0,2) → moves used up → 0
+│           ├── RIGHT → solve(0,2,2) → OUT → 1 ✓
+│           ├── UP    → solve(-1,1,2)→ OUT → 1 ✓
+│           └── DOWN  → solve(1,1,2)
+│                       └── all moves used → 0
+└── DOWN  → solve(1, 0, 1)  ... (similar)
+
+Complexity
+ValueStatesm × n × maxMoveTimeO(m × n × maxMove)SpaceO(m × n × maxMove)
+
+1473. Paint House III
+
+Show less
+08:24
+Problem Understanding
+Given:
+
+m houses in a row
+n colors (labeled 1 to n)
+houses[] array — 0 means unpainted, non-zero means already painted
+cost[i][j] — cost to paint house i with color j+1
+target — exact number of neighborhoods required
+Find:
+
+Minimum cost to paint all uncolored houses such that exactly target neighborhoods exist
+Return -1 if impossible
+What is a Neighborhood?
+
+houses = [1, 2, 2, 3, 3, 2, 1, 1]
+           ↑   ↑↑   ↑↑   ↑  ↑↑
+         {1} {2,2} {3,3} {2} {1,1}  → 5 neighborhoods
+A neighborhood = maximal group of consecutive same-colored houses
+
+Example
+houses = [0, 2, 1, 2, 0]
+cost    = [[1,10],[10,1],[10,1],[1,10],[5,1]]
+target  = 3, n = 2
+
+Already painted: house1=2, house2=1, house3=2
+Must paint:      house0 and house4
+
+Paint house0 with color 2 → cost=10
+Paint house4 with color 2 → cost=1
+
+Result: [2,2,1,2,2] → {2,2},{1},{2,2} = 3 neighborhoods ✓
+Total cost = 11
+Approach — Memoized Recursion (Top-Down DP)
+State Definition
+solver(idx, prev, neigh)
+  idx   = current house index
+  prev  = color of previous house (0 if none)
+  neigh = neighborhoods formed so far
+The Recursion Logic
+solver(idx, prev, neigh)
+     │
+     ├── BASE CASE 1: idx == m
+     │        neigh == target → return 0 (valid!)
+     │        neigh != target → return MAX (invalid)
+     │
+     ├── BASE CASE 2: neigh > target
+     │        → return MAX (pruning — too many neighborhoods)
+     │
+     ├── ALREADY PAINTED (houses[idx] != 0)
+     │        color is fixed, no cost
+     │        if color != prev → neigh+1
+     │        recurse with fixed color
+     │
+     └── NOT PAINTED (houses[idx] == 0)
+              try all n colors
+              pick minimum cost among valid ones
+              if color != prev → neigh+1
+Visual Flow
+houses = [0, 2, 1, 2, 0], target = 3
+
+solver(0, prev=0, neigh=0)
+│
+├── try color=1: cost[0][0]=1
+│     solver(1, prev=1, neigh=1)        ← house1 is fixed=2, 2≠1 → neigh=2
+│       solver(2, prev=2, neigh=2)      ← house2 is fixed=1, 1≠2 → neigh=3
+│         solver(3, prev=1, neigh=3)    ← house3 is fixed=2, 2≠1 → neigh=4
+│           neigh(4) > target(3) → MAX ✗
+│
+└── try color=2: cost[0][1]=10
+      solver(1, prev=2, neigh=1)        ← house1 is fixed=2, 2==2 → neigh=1
+        solver(2, prev=2, neigh=1)      ← house2 is fixed=1, 1≠2 → neigh=2
+          solver(3, prev=1, neigh=2)    ← house3 is fixed=2, 2≠1 → neigh=3
+            solver(4, prev=2, neigh=3)
+            ├── try color=1: cost=5
+            │     solver(5, prev=1, neigh=4) → neigh≠target → MAX ✗
+            └── try color=2: cost=1
+                  solver(5, prev=2, neigh=3) → neigh==target → 0 ✓
+                  total = 10 + 1 = 11 ✓
+DP Table Meaning
+Parameter	Range	Meaning
+idx	0 to m	Current house
+prev	0 to n	Previous house color
+neigh	0 to target	Neighborhoods so far
+dp[idx][prev][neigh] = minimum cost to paint
+                       houses[idx...m-1]
+                       given previous color = prev
+                       and neighborhoods so far = neigh
+Why MAX_VALUE guard before adding cost?
+java
+if (temp != Integer.MAX_VALUE) {
+    ans = Math.min(ans, cost[idx][i-1] + temp);
+}
+Prevents integer overflow — adding any number to MAX_VALUE wraps around to negative!
+
+Complexity
+Value
+States	m × (n+1) × (target+1)
+Time	O(m × n × target)
+Space	O(m × n × target)
+
+
+
+1751. Maximum Number of Events That Can Be Attended II
+
+Problem Understanding
+Given:
+
+events[i] = [startDay, endDay, value]
+Integer k — maximum events you can attend
+You can attend at most k events
+Cannot attend overlapping events
+End day is inclusive (if event ends on day 5, next event must start on day 6+)
+
+Find:
+
+Maximum sum of values by attending at most k events
+
+
+Example
+events = [[1,2,4],[3,4,3],[2,3,1]], k = 2
+
+Timeline:
+Day:    1  2  3  4
+Event1: [——]         value=4
+Event2:       [——]   value=3
+Event3:    [——]      value=1
+
+Best choice: Event1 + Event2 = 4+3 = 7 ✓
+(Event1 ends day2, Event2 starts day3 → No overlap)
+
+Approach — Sort + Binary Search + Memoized DP
+Why Sort First?
+Sort by start day → process events in order
+so we can use binary search to find
+the next non-overlapping event efficiently
+State Definition
+helper(idx, k) = maximum value we can get
+                 from events[idx...n-1]
+                 with k events remaining
+The Recursion Logic
+helper(idx, k)
+     │
+     ├── BASE CASE: k==0 or idx==n → return 0
+     │
+     ├── NOT TAKE current event
+     │        → helper(idx+1, k)
+     │
+     └── TAKE current event
+              → value[idx] + helper(nextIndex, k-1)
+              nextIndex = first event that starts
+                          AFTER current event ends
+
+Visual Flow
+events (sorted) = [[1,2,4],[2,3,1],[3,4,3]], k=2
+
+helper(0, k=2)  → event[0]=[1,2,4]
+│
+├── NOT TAKE → helper(1, k=2)
+│               ├── NOT TAKE → helper(2, k=2)
+│               │               ├── NOT TAKE → helper(3,2)=0
+│               │               └── TAKE=3 → helper(3,1)=0 → 3
+│               │               max = 3
+│               └── TAKE=1 → findIndex(end=3) → idx=2
+│                             helper(2, k=1)
+│                             ├── NOT TAKE → 0
+│                             └── TAKE=3   → 3
+│                             1+3 = 4
+│               max(3,4) = 4
+│
+└── TAKE=4 → findIndex(end=2) → idx=2  ← binary search!
+              helper(2, k=1)
+              ├── NOT TAKE → 0
+              └── TAKE=3   → 3
+              4+3 = 7
+
+max(4, 7) = 7 ✓
+
+Binary Search — findIndex()
+Find the FIRST event whose startDay > current event's endDay
+events[idx][1] = endDay of current event (targetEnd)
+
+We want: first event where startDay > targetEnd
+
+events sorted by startDay:
+[ [1,2,4] , [2,3,1] , [3,4,3] ]
+                       ↑
+          first startDay(3) > endDay(2) → return idx=2
+javaif (events[mid][0] > targetEnd) {
+    ans = mid;        // potential answer
+    right = mid - 1; // try to find earlier valid index
+} else {
+    left = mid + 1;  // startDay too early, go right
+}
+
+DP Table
+dp[idx][k] = max value from events[idx..n-1] with k remaining
+
+       k=0   k=1   k=2
+idx=0 [ 0  |  ?  |  7  ]
+idx=1 [ 0  |  ?  |  4  ]
+idx=2 [ 0  |  3  |  3  ]
+idx=3 [ 0  |  0  |  0  ]  ← base case
+
+Complexity
+ValueSortingO(n log n)Statesn × kBinary search per stateO(log n)Total TimeO(n × k × log n)SpaceO(n × k)
