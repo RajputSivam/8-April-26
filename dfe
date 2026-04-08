@@ -63,7 +63,7 @@ solve(0, 0, 0)
 └── DOWN  → solve(1, 0, 1)  ... (similar)
 
 Complexity
-ValueStatesm × n × maxMoveTimeO(m × n × maxMove)SpaceO(m × n × maxMove)
+ValueStates m × n × maxMoveTimeO(m × n × maxMove)SpaceO(m × n × maxMove)
 
 1473. Paint House III
 
